@@ -1,0 +1,101 @@
+<@hachi> what? how?
+<@hachi> nevermind that I asked
+<@hachi> I can't handle the answer yet
+<@hachi> I understand how to use it, that's pretty easy to look at
+<@hachi> but I don't understand how it works yet
+
+How does it work?
+=================
+
+Here's a bit of a diagram/pseudo-code to help, there's an explanation of how
+to read this later.
+
+> _invoke_state:
+>   "pre-invoke"
+>   main [   # delimit the current continuation
+>     "invoking"
+>     run the code
+>     "invoked ok"
+>     jump out to main (no need to save stuff)
+>   ]
+>   "post-invoke"
+
+> when yieldCC is called (with a control stack which has been delimited
+> with main):
+>   make continuation (ie. create a closure over where we save
+>     the current state)
+>   save the current state
+>   jump out to main
+
+> when a continuation is used:
+>   main [   # delimit the current continuation
+>     jump to the saved state
+>     # when the saved state "jumps out to main", it hits *this* main
+>   ]
+
+
+If you're familar with shift/reset, main[] is shift, and "jump out to main"
+is reset.
+
+
+An important point is that when you get to "invoked ok", this event is totally
+finished with, so at this point, all the Coro::State objects are expect to be
+throughly dead and GCed.
+
+
+Reading the diagram:
+--------------------
+
+It's easiest to think about three cases:
+
+1. a normal state invocation, with no yieldCC or continuations
+2. what happens when yieldCC is used
+3. what happens later when the continuation is invoked
+
+1.
+    _invoke_state is entered
+    We setjmp/shift/create a Coro::State called in $main.
+    We make sure control is inside this delimiting thingie.
+    We run the code for the state.
+    We're happy because that just finished like normal.
+    We go back to where we entered the "main" delimitation.
+    We finish up, and pop back out to the POE event loop.
+
+2.
+    yieldCC is always called from inside a user's code for a state handler
+    Hence it is always inside a main delimitation.
+    WRT control flow all yieldCC does is jump out to "main" early.
+    But it also has a side-effect:
+      it create a continuation
+      and stuffs into onto the POE event queue
+
+    So when tracing *all* you see happening is that the current state goes
+    back to the POE run loop early.
+
+3.
+    This is the hard bit.
+    A continuation looks a *lot* like _invoke_state.
+    This is the key.   It is nesting a *new* "main" delimitation inside the
+    current one.
+    This means that when the user's code is running and tries to go back out to
+    "main" either because of yieldCC or because it's finished, it comes back
+    *here* rather than out to the POE event loop.
+    This is the key feature of subcontinuations/shift/reset, it stops the
+    user breaking the runloop! :-)
+    
+    That's basically it: we go back and run the rest of the user's code.
+
+    When the continuation is finished notice that we go back to running where
+    the continuation was called.   We're not using escape continuations.
+
+    (They're one-shot and sub-, but not escape.)
+
+
+Papers
+======
+
+1.  spj's new monadic framework for subcontinuations (prompts etc)
+http://research.microsoft.com/Users/simonpj/papers/control/
+
+2.  shift/reset in scheme (scheme only natively does callCC)
+http://lambda-the-ultimate.org/node/view/297 "Shift to Control"
