@@ -1,4 +1,4 @@
-use inc::Module::Install;
+use inc::Module::Install 0.91;
 
 name     'POE-Session-YieldCC';
 all_from 'lib/POE/Session/YieldCC.pm';
@@ -14,5 +14,11 @@ auto_install;
 
 resources repository =>
     'git://github.com/rkitover/poe-session-yieldcc.git';
+
+if ($Module::Install::AUTHOR) {
+    system('pod2text lib/POE/Session/YieldCC.pm > README');
+}
+
+realclean_files 'README';
 
 WriteAll;
