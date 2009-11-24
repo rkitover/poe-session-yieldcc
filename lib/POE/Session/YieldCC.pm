@@ -5,7 +5,7 @@ use warnings;
 use POE;
 use Coro::State;
 
-our $VERSION = '0.201';
+our $VERSION = '0.202';
 
 BEGIN { *TRACE = sub () { 0 } unless defined *TRACE{CODE} }
 BEGIN { *LEAK  = sub () { 1 } unless defined *LEAK{CODE} }
@@ -283,9 +283,9 @@ In the case of a timeout, false is returned.
 When a timeout is involved, it is possible that some code may try to dispatch
 the wakeup-event after C<wait> has already returned. By default the event will
 no longer be registered any more, so _default will be delivered. However, if
-you so wish you can keep the event registered by providing your own event handler
-to take over after a timeout occurs. Anything that C<$kernel->state> understands
-is acceptable here.
+you so wish you can keep the event registered by providing your own event
+handler to take over after a timeout occurs. Anything that C<< $kernel->state
+>> understands is acceptable here.
 
 =back
 

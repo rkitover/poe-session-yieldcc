@@ -1,5 +1,8 @@
 Revision history for Perl extension POE::Session::YieldCC.
 
+0.202  2009-11-24 07:30:47
+        - POD patch from Frank Wiegand
+
 0.201  2009-04-09 21:13:55
         - Updated for recent versions of POE and Coro, all tests pass.
 
